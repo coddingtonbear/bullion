@@ -20,6 +20,7 @@ class FS9721
         String getDisplayedUnit();
         float getValue();
         String getUnit();
+        fs9721_info* getFlags();
     private:
         int parseDigit(uint8_t);
         void updateMeasurementInfo();

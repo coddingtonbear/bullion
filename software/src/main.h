@@ -12,4 +12,5 @@ void setup();
 void flashStatusLed();
 void updateStatusLed();
 void writeMultimeterBytes();
+void updatePreparedvalues();
 void loop();

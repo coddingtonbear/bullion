@@ -108,4 +108,103 @@ and then you'd receive very easy-to-parse values:
 
 ### SPI
 
-* TBA
+Every SPI transaction is a single 8-bit command ID, followed by a
+32-bit response.
+
+The following commands are implemented:
+
+* `0x01`: Return multimeter measurement as IEEE 754 floating point value; this
+  value is scaled to the appropriate base unit for the mode in which the
+  multimeter is currently operating..
+* `0x02`: Return multimeter display as IEEE 754 floating point value.
+  Note that this value is not scaled to handle displayed SI magnitudes!
+* `0x10`: Return current display flags as bits in this order:
+  * 31:
+  * 30: Sign
+  * 29: Low Battery
+  * 28: Hold
+  * 27: Rel
+  * 26: Beep
+  * 25: Sign (?)
+  * **24**: RS232
+  * 23: AUTO
+  * 22: 
+  * 21: 
+  * 20: M (mega)
+  * 19: k (kilo)
+  * 18: m (milli)
+  * 17: n (nano)
+  * **16**: µ (micro)
+  * 15: C2C1 00 (?)
+  * 14: C2C1 01 (?)
+  * 13: C2C1 10 (?)
+  * 12: C2C1 11 (?)
+  * 11:
+  * 10: Diode
+  * 09: DC
+  * **08**: AC
+  * 07:
+  * 06:
+  * 05: %
+  * 04: Hz
+  * 03: V
+  * 02: A
+  * 01: F
+  * 00: Ω
+
+#### SPI Troubleshooting
+
+The device itself operates as an SPI slave, and it's rather difficult to
+keep up with fast SPI speeds with just a 12Mhz clock, so if you have unreliable
+results, try slowing down your SPI bus speed -- it's not like you're
+going to ever be able to get more than a few measurements/second
+anyway given that the multimeter itself only measures 2-3x second.
+
+#### Arduino Example
+
+```c
+#include <SPI.h>
+
+#define MM_PIN 9
+
+void setup() {
+  digitalWrite(MM_PIN, HIGH);
+  pinMode(MM_PIN, OUTPUT);
+  pinMode(MISO, INPUT);
+  pinMode(MOSI, OUTPUT);
+  pinMode(SCK, OUTPUT);
+  SPI.begin();
+  SPI.beginTransaction(SPISettings(1000, MSBFIRST, SPI_MODE0));
+
+  Serial.begin(9600);
+}
+
+void loop() {
+  union {
+      float measurement;
+      unsigned char bytes[4];
+  } floatMeasurement;
+
+  digitalWrite(MM_PIN, LOW);
+
+  // Let's get the current measurement
+  SPI.transfer(0x01);
+  for(uint8_t i = 0; i < 4; i++) {
+    floatMeasurement.bytes[i] = SPI.transfer(i);
+  }
+  Serial.println(floatMeasurement.measurement, 7);
+  digitalWrite(MM_PIN, HIGH);
+
+  delay(500);
+
+  // Now let's print the current flags
+  digitalWrite(MM_PIN, LOW);
+  SPI.transfer(0x10);
+  for(uint8_t i = 0; i < 4; i++) {
+    Serial.println(SPI.transfer(i), BIN);
+  }
+  digitalWrite(MM_PIN, HIGH);
+
+  delay(3000);
+}
+```

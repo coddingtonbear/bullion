@@ -17,11 +17,64 @@ SerialOutputType outputMode = RAW;
 bool outputUnits = false;
 String command = "";
 
+byte currentValue[4];
+byte currentDisplayedValue[4];
+byte currentFlags[4];
+
+byte spiCommand = 0;
+byte* spiDataOut;
+uint8_t spiDataPos = 0;
+uint8_t spiDataLength = 0;
+
 
 void setup() {
     mm.begin(2400);
     Serial.begin(2400);
     command.reserve(64);
+
+    pinMode(SS, INPUT_PULLUP);
+    pinMode(MISO, OUTPUT);
+    SPCR0 |= _BV(SPE);
+    SPCR0 |= _BV(SPIE);
+}
+
+ISR (SPI0_STC_vect)
+{
+    byte c = SPDR0;
+
+    switch (spiCommand) {
+        case 0x00: {
+            spiCommand = c;
+            spiDataPos = 1;
+
+            switch (spiCommand) {
+                case 0x01: {
+                    spiDataOut = &currentValue[0];
+                    break;
+                }
+                case 0x02: {
+                    spiDataOut = &currentDisplayedValue[0];
+                    break;
+                }
+                case 0x10: {
+                    spiDataOut = &currentFlags[0];
+                    break;
+                }
+                default: {
+                    // Just to make sure that a value is set;
+                    spiDataOut = &currentFlags[0];
+                    spiCommand = 0;
+                }
+            }
+
+            SPDR0 = spiDataOut[0];
+            break;
+        }
+        default: {
+            SPDR0 = spiDataOut[spiDataPos];
+            spiDataPos++;
+        }
+    }
 }
 
 void flashStatusLed() {
@@ -97,7 +150,8 @@ void readSerialData() {
 
 void writeMultimeterBytes() {
     switch(outputMode) {
-    case RAW: {
+    case RAW:
+    {
         int bytes[14];
         fs9721.getBytes(bytes);
         for(uint8_t pos = 0; pos < 14; pos++) {
@@ -105,7 +159,8 @@ void writeMultimeterBytes() {
         }
         break;
     }
-    case VALUE: {
+    case VALUE:
+    {
         float value = fs9721.getValue();
         Serial.print(value, 10);
         if(outputUnits) {
@@ -116,9 +171,10 @@ void writeMultimeterBytes() {
         }
         break;
     }
-    case DISPLAYED: {
-        float value = fs9721.getDisplayedValue();
-        Serial.print(value, 4);
+    case DISPLAYED:
+    {
+        float displayedValue = fs9721.getDisplayedValue();
+        Serial.print(displayedValue, 4);
         if(outputUnits) {
             Serial.print(" ");
             Serial.println(fs9721.getDisplayedUnit());
@@ -132,15 +188,83 @@ void writeMultimeterBytes() {
     }
 }
 
+void updatePreparedValues() {
+    union {
+        float measurement;
+        unsigned char bytes[4];
+    } thing;
+
+    thing.measurement = fs9721.getValue();
+    for(int i = 0; i < 4; i++) {
+        currentValue[i] = thing.bytes[i];
+    }
+
+    thing.measurement = fs9721.getDisplayedValue();
+    for(int i = 0; i < 4; i++) {
+        currentDisplayedValue[i] = thing.bytes[i];
+    }
+
+    fs9721_info* flags = fs9721.getFlags();
+    for(int i = 0; i < 4; i++) {
+        uint8_t flag = 0;
+        switch(i) {
+            case 0: {
+                flag |= flags->is_sign << 6;
+                flag |= flags->is_bat << 5;
+                flag |= flags->is_hold << 4;
+                flag |= flags->is_rel << 3;
+                flag |= flags->is_beep << 2;
+                flag |= flags->is_sign << 1;
+                flag |= flags->is_rs232 << 0;
+                break;
+            }
+            case 1: {
+                flag |= flags->is_auto << 7;
+                flag |= flags->is_mega << 4;
+                flag |= flags->is_kilo << 3;
+                flag |= flags->is_milli << 2;
+                flag |= flags->is_nano << 1;
+                flag |= flags->is_micro << 0;
+                break;
+            }
+            case 2: {
+                flag |= flags->is_c2c1_00 << 7;
+                flag |= flags->is_c2c1_01 << 6;
+                flag |= flags->is_c2c1_10 << 5;
+                flag |= flags->is_c2c1_11 << 4;
+                flag |= flags->is_diode << 2;
+                flag |= flags->is_dc << 1;
+                flag |= flags->is_ac << 0;
+                break;
+            }
+            case 3: {
+                flag |= flags->is_percent << 5;
+                flag |= flags->is_hz << 4;
+                flag |= flags->is_volt << 3;
+                flag |= flags->is_ampere << 2;
+                flag |= flags->is_farad << 1;
+                flag |= flags->is_ohm << 0;
+                break;
+            }
+        }
+        currentFlags[i] = flag;
+    }
+}
+
 void loop() {
     while(mm.available()) {
         if(fs9721.update()) {
             flashStatusLed();
             writeMultimeterBytes();
+            updatePreparedValues();
         }
     }
     while(Serial.available()) {
         readSerialData();
     }
     updateStatusLed();
+
+    if(spiCommand && digitalRead(SS)) {
+        spiCommand = 0;
+    }
 }

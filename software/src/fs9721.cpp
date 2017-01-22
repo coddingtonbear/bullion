@@ -110,6 +110,10 @@ float FS9721::getValue() {
     return handleMagnitude(displayed);
 }
 
+fs9721_info* FS9721::getFlags() {
+    return info;
+}
+
 String FS9721::getDisplayedUnit() {
     String unit = getUnit();
     unit.reserve(10);
