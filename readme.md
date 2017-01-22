@@ -208,3 +208,31 @@ void loop() {
   delay(3000);
 }
 ```
+
+## Hardware
+
+![](/hardware/bullion-brd.svg)
+
+Check out the `hardware` directory to find Kicad schematics and layout.  The
+layout you'll find was designed for *homemade* *pcb* *fabrication* (note how 
+big the vias are and the presence of "transit" vias for working around the
+lack of through-hole plating), but it could be sent to your favorite PCB
+boardhouse for manufacture if desired.
+
+The following major components are used (see the schematic for details):
+
+* ATMEGA328PB Microcontroller in the QFP package (A normal ATMEGA328P
+  would work fine, too, but you will have to update a handful of SPI-related
+  register and interrupt names to remove the extra zero.
+  Although the ATMEGA328PB is a little more capable than the ATMEGA318P
+  these days, they are just a little cheaper; both are around 2.5 USD.
+* CH340G USB-to-UART IC: You can buy these from Aliexpress or wherever
+  for less than 0.50 USD.
+* 12Mhz Crystal (SMD HC-49)
+* A MicroUSB connector.
+* A standard through-hole 3.5mm stereo connector.
+
+Note that the design relies upon the CH340G chip sharing the
+microcontroller's clock; you will want to set the `CKOUT=0` fuse
+(generally titled "Clock output on PORTB0").
+
