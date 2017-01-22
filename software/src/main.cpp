@@ -1,55 +1,146 @@
 #include "main.h"
+#include "fs9721.h"
 
+#define STATUS_LED 5
+#define MM_RX 2
+#define MM_TX 3
 
-SoftwareSerial mm = SoftwareSerial(2, 3);
+#define LED_LIGHT_TIME 10000
 
-uint8_t currentByte = 0;
-uint8_t currentBytes[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-uint8_t completeBytes[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+SoftwareSerial mm = SoftwareSerial(MM_RX, MM_TX, true);
+FS9721 fs9721 = FS9721(&mm);
+
+bool ledLit = false;
+unsigned long ledLitUntil = 0;
+
+SerialOutputType outputMode = RAW;
+bool outputUnits = false;
+String command = "";
+
 
 void setup() {
-  // put your setup code here, to run once:
-  mm.begin(2400);
-  Serial.begin(9600);
-  Serial.println("Ready");
+    mm.begin(2400);
+    Serial.begin(2400);
+    command.reserve(64);
 }
 
-void readMultimeterData() {
-    uint8_t byte = mm.read();
+void flashStatusLed() {
+    digitalWrite(STATUS_LED, HIGH);
+    ledLitUntil = micros() + LED_LIGHT_TIME;
+}
 
-    Serial.print(byte, BIN);
-    Serial.print(": ");
-    uint8_t pos = byte / 16;
-    Serial.println(pos);
-
-    if (byte == -1) {
-        return;
+void updateStatusLed() {
+    if(micros() > ledLitUntil) {
+        digitalWrite(STATUS_LED, LOW);
     }
-    if (pos == 0 || pos == 15) {
-        return;
+}
+
+void readSerialData() {
+    char byte = Serial.read();
+
+    if(byte == '\n') {
+        uint8_t idx = command.indexOf('=');
+        if(idx == -1) {
+            command = "";
+            command.reserve(64);
+            return;
+        }
+        String cmd = command.substring(0, idx);
+        String value = command.substring(idx + 1);
+        value.trim();
+        cmd.trim();
+
+        bool errorValue = false;
+        bool errorCommand = false;
+        command = "";
+        command.reserve(64);
+
+        Serial.print(cmd);
+        Serial.print('=');
+        Serial.println(value);
+
+        if (cmd.compareTo("output") == 0) {
+            if(value == "raw") {
+                outputMode = RAW;
+            } else if(value.compareTo("none") == 0) {
+                outputMode = NONE;
+            } else if(value.compareTo("value") == 0) {
+                outputMode = VALUE;
+            } else if(value.compareTo("displayed") == 0) {
+                outputMode = DISPLAYED;
+            } else {
+                errorValue = true;
+            }
+        } else if(cmd.compareTo("units") == 0) {
+            if(value == "1") {
+                outputUnits = true;
+            } else if(value == "0") {
+                outputUnits = false;
+            } else {
+                errorValue = true;
+            }
+        } else {
+            errorCommand = true;
+        }
+        if (errorCommand) {
+            Serial.println("ERROR: INVALID COMMAND");
+        } else if(errorValue) {
+            Serial.println("ERROR: INVALID VALUE");
+        } else {
+            Serial.println("OK");
+        }
+
     } else {
-        if (pos - 1 == currentByte) {
-            currentBytes[pos - 1] = byte;
-            currentByte++;
-        }
+        command = command + byte;
     }
+}
 
-    if(currentByte >= 14) {
-        currentByte = 0;
-
+void writeMultimeterBytes() {
+    switch(outputMode) {
+    case RAW: {
+        int bytes[14];
+        fs9721.getBytes(bytes);
         for(uint8_t pos = 0; pos < 14; pos++) {
-            completeBytes[pos] = currentBytes[pos];
-            Serial.println("Measurement completed");
+            Serial.write(bytes[pos]);
         }
+        break;
+    }
+    case VALUE: {
+        float value = fs9721.getValue();
+        Serial.print(value, 10);
+        if(outputUnits) {
+            Serial.print(" ");
+            Serial.println(fs9721.getUnit());
+        } else {
+            Serial.println("");
+        }
+        break;
+    }
+    case DISPLAYED: {
+        float value = fs9721.getDisplayedValue();
+        Serial.print(value, 4);
+        if(outputUnits) {
+            Serial.print(" ");
+            Serial.println(fs9721.getDisplayedUnit());
+        } else {
+            Serial.println("");
+        }
+        break;
+    }
+    default:
+        break;
     }
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  while(mm.available()) {
-    Serial.println(mm.read(), BIN);
-    //readMultimeterData();
-  }
-  Serial.print('.');
-  delay(1000);
+    while(mm.available()) {
+        if(fs9721.update()) {
+            flashStatusLed();
+            writeMultimeterBytes();
+        }
+    }
+    while(Serial.available()) {
+        readSerialData();
+    }
+    updateStatusLed();
 }
