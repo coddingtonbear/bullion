@@ -89,7 +89,7 @@ and you'd receive the following values:
 0.001239 V
 ```
 
-You could even turn turn off unit display if you were not concerned about
+You could even turn off unit display if you were not concerned about
 identifying what mode the multimeter was in while the returned measurement
 was taking place (note, though, that `units=0` is the default state, so
 you need not send that command if you have not already enabled unit display):
