@@ -225,7 +225,7 @@ The following major components are used (see the schematic for details):
   would work fine, too, but you will have to update a handful of SPI-related
   register and interrupt names to remove the extra zero (the -PB version
   has two SPI peripherals).
-  Although the ATMEGA328PB is a little more capable than the ATMEGA318P
+  Although the ATMEGA328PB is a little more capable than the ATMEGA328P
   these days, they are just a little cheaper; both are around 2.5 USD.
 * CH340G USB-to-UART IC: You can buy these from Aliexpress or wherever
   for less than 0.50 USD.
