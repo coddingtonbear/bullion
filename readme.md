@@ -211,7 +211,7 @@ void loop() {
 
 ## Hardware
 
-![](https://raw.githubusercontent.com/coddingtonbear/bullion/master/hardware/bullion-brd.svg)
+![](https://cdn.rawgit.com/coddingtonbear/bullion/master/hardware/bullion-brd.svg)
 
 Check out the `hardware` directory to find Kicad schematics and layout.  The
 layout you'll find was designed for *homemade* *pcb* *fabrication* (note how 
