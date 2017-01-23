@@ -239,3 +239,34 @@ Note that the design relies upon the CH340G chip sharing the
 microcontroller's clock; you will want to set the `CKOUT=0` fuse
 (generally titled "Clock output on PORTB0").
 
+## Future Thoughts
+
+There are lots of things about this project that I'd change if I were to
+approach it again; those include:
+
+* Making the primary serial interface I2C instead of SPI.
+    * I2C provides a lot more flexibility for letting a device take
+      extra time to perform slow operations via "clock stretching".  As
+      this is currently designed, SPI is used, and the client device must
+      be able to keep up with the clock speed set by the master or data
+      will be lost.
+    * With I2C, you can save a wire or two!
+    * The downside is that we might have to expose a couple extra pins
+      since the current header is used for both programming and the serial
+      interface.  If I2C is added, either two additional header pins will
+      need to be added, or maybe a multiplexer chip allowing two header
+      pins to be shared individually between two different microcontroller
+      pins.
+* Orient the microcontroller at a 45˚ angle.  This should make routing a
+  little less chaotic.
+* Add reverse current protection!  Not having such protection was a little
+  bit of an embarassing oversight.
+* Use either a MicroUSB breakout board or a MiniUSB connector instead of
+  the existing MicroUSB connector. Soldering that tiny connector onto
+  a homemade PCB is very difficult -- the pin pitch of those connectors
+  is 0.65mm; just a smidge below what my current process is able to
+  resolve (~0.75mm) without needing to use a sharp knife to separate
+  traces.
+* Perhaps place devices on both sides of the board to save space?  It's
+  not clear to me whether that would be worth it, but it could make the
+  board a lot smaller.
