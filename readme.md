@@ -1,5 +1,7 @@
 # USB & SPI Interface for FS9721-based Multimeter
 
+![](https://coddingtonbear-public.s3.amazonaws.com/github/bullion/connected.jpg)
+
 Do you have a cheap Chinese multimeter using the FS9721 chipset and
 want to add an easy-to-use USB interface to it?  Or, do you have an
 arduino project in mind where you might want to collect measurements
