@@ -1,4 +1,4 @@
-# USB & SPI Interface for FS9721-based Multimeter
+# USB & SPI Interface for FS9721-based Multimeter (Bullion)
 
 ![](https://coddingtonbear-public.s3.amazonaws.com/github/bullion/connected.jpg)
 
