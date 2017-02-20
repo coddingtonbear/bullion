@@ -213,6 +213,7 @@ void loop() {
 
 ## Hardware
 
+![](https://s3-us-west-2.amazonaws.com/coddingtonbear-public/github/bullion/bullion.svg)
 ![](https://cdn.rawgit.com/coddingtonbear/bullion/master/hardware/bullion-brd.svg)
 
 Check out the `hardware` directory to find Kicad schematics and layout.  The
